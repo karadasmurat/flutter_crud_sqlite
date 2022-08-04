@@ -53,11 +53,27 @@ class DBProvider {
 
     int newID = await db.insert(
       TABLE_TODO,
-      todo.toMap(),
+      todo.toJson(),
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
 
     return todo.copyWithID(id: newID);
+  }
+
+  Future<Todo?> getTodoById(int id) async {
+    // Get a reference to the database.
+    final db = await database;
+    final results = await db.query(
+      TABLE_TODO,
+      where: '$COLUMN_TODO_ID = ?',
+      whereArgs: [id],
+    );
+    if (results.isNotEmpty) {
+      return Todo.fromJson(results.first);
+    } else {
+      //TODO
+      // throw Exception ?
+    }
   }
 
   // A method that retrieves all the Todos from the database.
@@ -67,7 +83,36 @@ class DBProvider {
 
     final List<Map<String, dynamic>> results = await db.query(TABLE_TODO);
 
-    Iterable<Todo> todos = results.map((e) => Todo.fromMap(e));
+    Iterable<Todo> todos = results.map((e) => Todo.fromJson(e));
     return Future.value(todos.toList());
+  }
+
+  // Define a function that updates todo
+  Future<int> updateTodo(Todo todo) async {
+    // Get a reference to the database.
+    final db = await database;
+
+    int numberOfChanges = await db.update(
+      TABLE_TODO,
+      todo.toJson(),
+      where: "$COLUMN_TODO_ID = ?",
+      whereArgs: [todo.id],
+    );
+
+    return numberOfChanges;
+  }
+
+  // Define a function that deletes todo
+  Future<int> deleteTodo(Todo todo) async {
+    // Get a reference to the database.
+    final db = await database;
+
+    int numberOfChanges = await db.delete(
+      TABLE_TODO,
+      where: "$COLUMN_TODO_ID = ?",
+      whereArgs: [todo.id],
+    );
+
+    return numberOfChanges;
   }
 }

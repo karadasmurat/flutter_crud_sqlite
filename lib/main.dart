@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'views/homepage.dart';
+
 // test file for now:
 // flutter run lib/db_todo_test.dart
 
@@ -13,8 +15,7 @@ void main() {
         brightness: Brightness.light,
         fontFamily: "Open Sans",
         primarySwatch: Colors.blue,
-        colorScheme:
-            ColorScheme.fromSwatch().copyWith(secondary: Colors.cyan[600]),
+        colorScheme: ColorScheme.fromSwatch().copyWith(secondary: Colors.cyan[600]),
       ),
       initialRoute: "/home",
       routes: {
@@ -22,25 +23,4 @@ void main() {
       },
     ),
   );
-}
-
-class HomePage extends StatefulWidget {
-  const HomePage({Key? key, required this.title}) : super(key: key);
-
-  final String title;
-
-  @override
-  State<HomePage> createState() => _HomePageState();
-}
-
-class _HomePageState extends State<HomePage> {
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.title),
-      ),
-      body: Container(),
-    );
-  }
 }
