@@ -86,6 +86,20 @@ class DBProvider {
     // }
   }
 
+  Future<List<Todo>> getTodosByTitle(String title) async {
+    // Get a reference to the database.
+    final db = await database;
+
+    final results = await db.query(
+      TABLE_TODO,
+      where: "$COLUMN_TODO_TITLE LIKE ?",
+      whereArgs: ["%$title%"],
+    );
+
+    Iterable<Todo> todos = results.map((e) => Todo.fromJson(e));
+    return todos.toList();
+  }
+
   // A method that retrieves all the Todos from the database.
   Future<List<Todo>> getAllTodos() async {
     // Get a reference to the database.

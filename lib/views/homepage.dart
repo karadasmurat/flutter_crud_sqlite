@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_crud_sqlite/DBProvider.dart';
 import 'package:flutter_crud_sqlite/model/todo.dart';
+import 'package:flutter_crud_sqlite/views/search_todo.dart';
 import 'package:intl/intl.dart';
 
 class HomePage extends StatefulWidget {
@@ -13,6 +14,10 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   final dbProvider = DBProvider.instance;
   late Future<List<Todo>> todos;
+
+  // Using a GlobalKey is the recommended way to access a form.
+  //Create a global key that uniquely identifies the Form widget and allows validation.
+  final _formKey = GlobalKey<FormState>();
 
   late TextEditingController _name;
   late TextEditingController _due;
@@ -42,9 +47,21 @@ class _HomePageState extends State<HomePage> {
         elevation: 0,
         actions: [
           IconButton(
+            onPressed: () {
+              //showSearch(context: context, delegate: MySearchDelegate());
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => SearchTodo(),
+                ),
+              );
+            },
+            icon: const Icon(Icons.search),
+          ),
+          IconButton(
               onPressed: () {
                 showModalBottomSheet(
                   context: context,
+                  isScrollControlled: true,
                   // this is NOT a BoxShape, its ShapeBorder
                   shape: const RoundedRectangleBorder(
                     borderRadius: BorderRadius.vertical(
@@ -72,38 +89,43 @@ class _HomePageState extends State<HomePage> {
               } else if (snapshot.hasError) {
                 return const Text("Error");
               } else {
-                return ListView.builder(
-                  key: UniqueKey(),
-                  itemCount: snapshot.data!.length,
-                  itemBuilder: (context, index) {
-                    final todo = snapshot.data![index];
-                    return Card(
-                      color: (todo.due != null && DateTime.now().compareTo(todo.due!) > 0)
-                          ? Colors.amberAccent
-                          : null,
-                      key: ObjectKey(todo),
-                      child: ListTile(
-                        title: Text(todo.title),
-                        subtitle: todo.due != null
-                            ? Text(DateFormat.yMMMMd('en_US').format(todo.due!))
-                            : const Text(""),
-                        trailing: IconButton(
-                            onPressed: () {
-                              dbProvider.deleteTodo(todo);
-                              setState(() {
-                                todos = dbProvider.getAllTodos();
-                              });
-                            },
-                            icon: const Icon(Icons.delete)),
-                      ),
-                    );
-                  },
-                );
+                final data = snapshot.data!;
+                return buildTodoList(data);
               }
             },
           ),
         ),
       ),
+    );
+  }
+
+  Widget buildTodoList(List<Todo> todoList) {
+    return ListView.builder(
+      //key: UniqueKey(),
+      itemCount: todoList.length,
+      itemBuilder: (context, index) {
+        final todo = todoList[index];
+        return Card(
+          color: (todo.due != null && DateTime.now().compareTo(todo.due!) > 0)
+              ? Colors.amberAccent //Theme.of(context).colorScheme.secondary
+              : null,
+          key: ObjectKey(todo),
+          child: ListTile(
+            title: Text(todo.title),
+            subtitle: todo.due != null
+                ? Text(DateFormat.yMMMMd('en_US').format(todo.due!))
+                : const Text(""),
+            trailing: IconButton(
+                onPressed: () {
+                  dbProvider.deleteTodo(todo);
+                  setState(() {
+                    todos = dbProvider.getAllTodos();
+                  });
+                },
+                icon: const Icon(Icons.delete)),
+          ),
+        );
+      },
     );
   }
 
@@ -117,90 +139,146 @@ class _HomePageState extends State<HomePage> {
         // use of a transparent canvas could be an option
         borderRadius: BorderRadius.circular(30),
       ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Text(
-            "Todo",
-            style: Theme.of(context).textTheme.displayMedium,
-          ),
-          const SizedBox(height: 20),
-          TextFormField(
-            controller: _name,
-            decoration: InputDecoration(
-              filled: true,
-              fillColor: Colors.blue[50],
-              labelText: "Title",
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          // If your BottomSheetModel is Column make sure you add mainAxisSize: MainAxisSize.min,
+          // otherwise the sheet will cover the whole screen.
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Text(
+              "Todo",
+              style: Theme.of(context).textTheme.displayMedium,
+            ),
+            const SizedBox(height: 20),
+            Padding(
+              padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+              child: TextFormField(
+                controller: _name,
+                validator: (value) {
+                  return (value == null || value.isEmpty) ? 'Please enter title' : null;
+                },
+                decoration: InputDecoration(
+                  filled: true,
+                  fillColor: Colors.blue[50],
+                  labelText: "Title",
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                //keyboardType: TextInputType.text,
               ),
             ),
-            //keyboardType: TextInputType.text,
-          ),
-          const SizedBox(
-            height: 10.0,
-          ),
-          TextFormField(
-            controller: _due,
-            decoration: InputDecoration(
-              labelText: "Due Date",
-              prefixIcon: const Icon(Icons.calendar_today),
-              filled: true,
-              fillColor: Colors.blue[50],
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-              // icon: Icon(Icons.calendar_today),
+            const SizedBox(
+              height: 10.0,
             ),
-            onTap: () async {
-              // stop keyboard from appearing
-              FocusScope.of(context).requestFocus(FocusNode());
+            TextFormField(
+              controller: _due,
+              decoration: InputDecoration(
+                labelText: "Due Date",
+                prefixIcon: const Icon(Icons.calendar_today),
+                filled: true,
+                fillColor: Colors.blue[50],
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                // icon: Icon(Icons.calendar_today),
+              ),
+              onTap: () async {
+                // stop keyboard from appearing
+                FocusScope.of(context).requestFocus(FocusNode());
 
-              DateTime? picked = await showDatePicker(
-                context: context,
-                initialDate: DateTime.now(),
-                firstDate: DateTime(2020),
-                lastDate: DateTime(2030),
-              );
-
-              if (picked != null) {
-                setState(
-                  () => {
-                    //data.registrationdate = picked.toString(),
-                    _due.text = DateFormat.yMMMMd('en_US').format(picked)
-                  },
+                DateTime? picked = await showDatePicker(
+                  context: context,
+                  initialDate: DateTime.now(),
+                  firstDate: DateTime(2020),
+                  lastDate: DateTime(2030),
                 );
-              }
-            },
-          ),
-          ButtonBar(
-            children: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-                child: const Text("Cancel"),
-              ),
-              OutlinedButton(
-                onPressed: () async {
-                  await dbProvider.insertTodo(
-                    Todo(
-                      title: _name.text,
-                      due: DateFormat.yMMMMd('en_US').parse(_due.text),
-                    ),
+
+                if (picked != null) {
+                  setState(
+                    () => {
+                      //data.registrationdate = picked.toString(),
+                      _due.text = DateFormat.yMMMMd('en_US').format(picked)
+                    },
                   );
-                  setState(() {
-                    todos = dbProvider.getAllTodos();
-                  });
-                  Navigator.of(context).pop();
-                },
-                child: const Text("OK"),
-              ),
-            ],
-          )
-        ],
+                }
+              },
+            ),
+            ButtonBar(
+              children: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text("Cancel"),
+                ),
+                OutlinedButton(
+                  onPressed: () async {
+                    // The FormState class contains the validate() method.
+                    if (_formKey.currentState!.validate()) {
+                      await dbProvider.insertTodo(
+                        Todo(
+                          title: _name.text,
+                          due: DateFormat.yMMMMd('en_US').parse(_due.text),
+                        ),
+                      );
+                      setState(() {
+                        todos = dbProvider.getAllTodos();
+                      });
+                      Navigator.of(context).pop();
+                    }
+                  },
+                  child: const Text("OK"),
+                ),
+              ],
+            )
+          ],
+        ),
       ),
     );
+  }
+}
+
+class MySearchDelegate extends SearchDelegate {
+  final dbProvider = DBProvider.instance;
+
+  @override
+  List<Widget>? buildActions(BuildContext context) {
+    return [
+      IconButton(
+        onPressed: () {
+          if (query.isEmpty) {
+            close(context, null);
+          } else {
+            query = "";
+          }
+        },
+        icon: const Icon(Icons.clear),
+      ),
+    ];
+  }
+
+  @override
+  Widget? buildLeading(BuildContext context) {
+    return IconButton(
+      onPressed: () {
+        close(context, null);
+      },
+      icon: const Icon(Icons.arrow_back_ios),
+    );
+  }
+
+  @override
+  Widget buildResults(BuildContext context) {
+    return Center(child: Text(query));
+    //final todos = await dbProvider.getTodosByTitle("MK");
+  }
+
+  @override
+  Widget buildSuggestions(BuildContext context) {
+    return Container();
   }
 }
