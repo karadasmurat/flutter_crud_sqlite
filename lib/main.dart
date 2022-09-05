@@ -9,7 +9,7 @@ void main() {
   runApp(
     MaterialApp(
       //When using initialRoute, don’t define a home property.
-      //home: HomePage(),
+      home: HomePage(),
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         brightness: Brightness.light,
@@ -17,10 +17,10 @@ void main() {
         primarySwatch: Colors.blue,
         colorScheme: ColorScheme.fromSwatch().copyWith(secondary: Colors.cyan[600]),
       ),
-      initialRoute: "/home",
-      routes: {
-        "/home": (context) => HomePage(title: "SQLITE CRUD"),
-      },
+      // initialRoute: "/home",
+      // routes: {
+      //   "/home": (context) => HomePage(title: "SQLITE CRUD"),
+      // },
     ),
   );
 }

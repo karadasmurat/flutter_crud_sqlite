@@ -44,7 +44,7 @@ class DBProvider {
     return dbase;
   }
 
-  //Future<void> close() async => _db.close();
+  Future<void> close() async => await _database?.close();
 
   // Define a function that inserts todo into the database
   Future<Todo> insertTodo(Todo todo) async {
@@ -57,7 +57,10 @@ class DBProvider {
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
 
-    return todo.copyWithID(id: newID);
+    final newTodo = todo.copyWith(id: newID);
+    print("Todo saved: $newTodo");
+
+    return newTodo;
   }
 
   Future<Todo?> getTodoById(int id) async {
@@ -68,12 +71,19 @@ class DBProvider {
       where: '$COLUMN_TODO_ID = ?',
       whereArgs: [id],
     );
-    if (results.isNotEmpty) {
-      return Todo.fromJson(results.first);
-    } else {
-      //TODO
-      // throw Exception ?
-    }
+
+    return results.isNotEmpty ? Todo.fromJson(results.first) : null;
+
+    // returning based on condition v1 - Use the ternary operator
+    // "return this or that, based on a condition"
+    // return (condition) ? something : somethingElse ;
+    //
+    // returning based on condition v2
+    // if (condition) {
+    //  return something ;
+    // } else {
+    //  return somethingElse
+    // }
   }
 
   // A method that retrieves all the Todos from the database.
@@ -81,10 +91,11 @@ class DBProvider {
     // Get a reference to the database.
     final db = await database;
 
-    final List<Map<String, dynamic>> results = await db.query(TABLE_TODO);
+    final List<Map<String, dynamic>> results =
+        await db.query(TABLE_TODO, orderBy: "$COLUMN_TODO_DUE DESC");
 
     Iterable<Todo> todos = results.map((e) => Todo.fromJson(e));
-    return Future.value(todos.toList());
+    return todos.toList();
   }
 
   // Define a function that updates todo
@@ -112,6 +123,8 @@ class DBProvider {
       where: "$COLUMN_TODO_ID = ?",
       whereArgs: [todo.id],
     );
+
+    print("Deleted $numberOfChanges rows.");
 
     return numberOfChanges;
   }
