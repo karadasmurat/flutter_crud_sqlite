@@ -1,7 +1,11 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
-import 'package:flutter_crud_sqlite/DBProvider.dart';
+import 'package:flutter_crud_sqlite/services/DBProvider.dart';
 import 'package:flutter_crud_sqlite/model/todo.dart';
+import 'package:flutter_crud_sqlite/services/todo_db_service.dart';
 import 'package:flutter_crud_sqlite/views/search_todo.dart';
+import 'package:flutter_crud_sqlite/widgets/list_item.dart';
 import 'package:intl/intl.dart';
 
 class HomePage extends StatefulWidget {
@@ -12,7 +16,8 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  final dbProvider = DBProvider.instance;
+  //final dbProvider = DBProvider.instance;
+  final dbService = TodoDBService();
   late Future<List<Todo>> todos;
 
   // Using a GlobalKey is the recommended way to access a form.
@@ -22,10 +27,12 @@ class _HomePageState extends State<HomePage> {
   late TextEditingController _name;
   late TextEditingController _due;
 
+  Set<int> _selectedTodoIDs = {};
+
   @override
   void initState() {
     super.initState();
-    todos = dbProvider.getAllTodos();
+    todos = dbService.getAllTodos();
 
     _name = TextEditingController();
     _due = TextEditingController();
@@ -56,6 +63,18 @@ class _HomePageState extends State<HomePage> {
               );
             },
             icon: const Icon(Icons.search),
+          ),
+          IconButton(
+            onPressed: () {
+              log("Deleting: $_selectedTodoIDs");
+              for (var id in _selectedTodoIDs) {
+                dbService.deleteTodoById(id);
+              }
+              setState(() {
+                todos = dbService.getAllTodos();
+              });
+            },
+            icon: const Icon(Icons.delete),
           ),
           IconButton(
               onPressed: () {
@@ -90,42 +109,32 @@ class _HomePageState extends State<HomePage> {
                 return const Text("Error");
               } else {
                 final data = snapshot.data!;
-                return buildTodoList(data);
+                return ListView.separated(
+                  separatorBuilder: (context, index) => const Divider(height: 5.0),
+
+                  //key: UniqueKey(),
+                  itemCount: data.length,
+                  itemBuilder: (context, index) {
+                    final todo = data[index];
+                    return ListItem(
+                      todo: todo,
+                      onTileSelected: (todoID, isAdded) {
+                        if (isAdded) {
+                          _selectedTodoIDs.add(todoID);
+                        } else {
+                          _selectedTodoIDs.remove(todoID);
+                        }
+
+                        log("selected: $_selectedTodoIDs");
+                      },
+                    );
+                  },
+                );
               }
             },
           ),
         ),
       ),
-    );
-  }
-
-  Widget buildTodoList(List<Todo> todoList) {
-    return ListView.builder(
-      //key: UniqueKey(),
-      itemCount: todoList.length,
-      itemBuilder: (context, index) {
-        final todo = todoList[index];
-        return Card(
-          color: (todo.due != null && DateTime.now().compareTo(todo.due!) > 0)
-              ? Colors.amberAccent //Theme.of(context).colorScheme.secondary
-              : null,
-          key: ObjectKey(todo),
-          child: ListTile(
-            title: Text(todo.title),
-            subtitle: todo.due != null
-                ? Text(DateFormat.yMMMMd('en_US').format(todo.due!))
-                : const Text(""),
-            trailing: IconButton(
-                onPressed: () {
-                  dbProvider.deleteTodo(todo);
-                  setState(() {
-                    todos = dbProvider.getAllTodos();
-                  });
-                },
-                icon: const Icon(Icons.delete)),
-          ),
-        );
-      },
     );
   }
 
@@ -211,6 +220,8 @@ class _HomePageState extends State<HomePage> {
               children: [
                 TextButton(
                   onPressed: () {
+                    _name.clear();
+                    _due.clear();
                     Navigator.of(context).pop();
                   },
                   child: const Text("Cancel"),
@@ -219,14 +230,18 @@ class _HomePageState extends State<HomePage> {
                   onPressed: () async {
                     // The FormState class contains the validate() method.
                     if (_formKey.currentState!.validate()) {
-                      await dbProvider.insertTodo(
+                      await dbService.insertTodo(
                         Todo(
                           title: _name.text,
-                          due: DateFormat.yMMMMd('en_US').parse(_due.text),
+                          due: (_due.text.isEmpty)
+                              ? null
+                              : DateFormat.yMMMMd('en_US').parse(_due.text),
                         ),
                       );
+                      _name.clear();
+                      _due.clear();
                       setState(() {
-                        todos = dbProvider.getAllTodos();
+                        todos = dbService.getAllTodos();
                       });
                       Navigator.of(context).pop();
                     }
