@@ -1,5 +1,6 @@
 import 'dart:developer';
 
+import 'package:badges/badges.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_crud_sqlite/services/DBProvider.dart';
 import 'package:flutter_crud_sqlite/model/todo.dart';
@@ -74,7 +75,10 @@ class _HomePageState extends State<HomePage> {
                 todos = dbService.getAllTodos();
               });
             },
-            icon: const Icon(Icons.delete),
+            icon: Badge(
+                showBadge: _selectedTodoIDs.isNotEmpty,
+                badgeContent: Text("${_selectedTodoIDs.length}"),
+                child: const Icon(Icons.delete)),
           ),
           IconButton(
               onPressed: () {
@@ -117,13 +121,16 @@ class _HomePageState extends State<HomePage> {
                   itemBuilder: (context, index) {
                     final todo = data[index];
                     return ListItem(
+                      key: ObjectKey(todo),
                       todo: todo,
                       onTileSelected: (todoID, isAdded) {
-                        if (isAdded) {
-                          _selectedTodoIDs.add(todoID);
-                        } else {
-                          _selectedTodoIDs.remove(todoID);
-                        }
+                        setState(() {
+                          if (isAdded) {
+                            _selectedTodoIDs.add(todoID);
+                          } else {
+                            _selectedTodoIDs.remove(todoID);
+                          }
+                        });
 
                         log("selected: $_selectedTodoIDs");
                       },
